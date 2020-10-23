@@ -1,63 +1,62 @@
 import unittest
 
-from matlib import *
+from life import grid_adjacency
+from life import count_alive_neighbors_matmul
+from life import count_alive_neighbors_slice
 import numpy as np
 
-tol = 1e-8
+# the following code is included from
+def neighbors(i, j, m, n):
+    inbrs = [-1, 0, 1]
+    if i == 0:
+        inbrs = [0, 1]
+    if i == m-1:
+        inbrs = [-1, 0]
+    jnbrs = [-1, 0, 1]
+    if j == 0:
+        jnbrs = [0, 1]
+    if j == n-1:
+        jnbrs = [-1, 0]
 
-class TestChol(unittest.TestCase):
+    for delta_i in inbrs:
+        for delta_j in jnbrs:
+            if delta_i == delta_j == 0:
+                continue
+            yield i + delta_i, j + delta_j
 
-	def setUp(self):
-		pass
+def count_alive_neighbors(S):
+    m, n = S.shape
+    cts = np.zeros(S.shape, dtype=np.int64)
+    for i in range(m):
+        for j in range(n):
+            for i2, j2 in neighbors(i, j, m, n):
+                cts[i,j] = cts[i,j] + S[i2, j2]
 
-	def test_solve_chol(self):
-		m = 10
-		n = 20
-		np.random.seed(0)
-		for i in range(5):
-			A = np.random.randn(m,n)
-			A = A @ A.T
-			x = np.random.rand(m)
-			b = A @ x
-			x2 = solve_chol(A, b)
-			self.assertTrue(np.all(np.abs(x - x2) < tol))
-
-
-class TestPow(unittest.TestCase):
-
-	def setUp(self):
-		pass
-
-	def test_matrix_pow(self):
-		m = 10
-		n = 10
-		np.random.seed(0)
-		for i in range(5):
-			A = np.random.randn(m,n)
-			A = A + A.T
-
-			An = matrix_pow(A, i)
-			An2 = np.linalg.matrix_power(A, i)
-
-			self.assertTrue(np.all(np.abs(An - An2) < tol))
+    return cts
 
 
-class TestDet(unittest.TestCase):
+
+class TestAdjacency(unittest.TestCase):
 
 	def setUp(self):
 		pass
 
-	def test_det(self):
-		m = 10
-		n = 10
-		np.random.seed(0)
-		for i in range(5):
-			A = np.random.randn(m,n)
+	def test_grid_adjacency(self):
 
-			d = abs_det(A)
-			d2 = la.det(A)
+		Atrue = np.array([[0., 1., 0., 0., 1., 1., 0., 0., 0., 0., 0., 0.],
+			[1., 0., 1., 0., 1., 1., 1., 0., 0., 0., 0., 0.],
+			[0., 1., 0., 1., 0., 1., 1., 1., 0., 0., 0., 0.],
+			[0., 0., 1., 0., 0., 0., 1., 1., 0., 0., 0., 0.],
+			[1., 1., 0., 0., 0., 1., 0., 0., 1., 1., 0., 0.],
+			[1., 1., 1., 0., 1., 0., 1., 0., 1., 1., 1., 0.],
+			[0., 1., 1., 1., 0., 1., 0., 1., 0., 1., 1., 1.],
+			[0., 0., 1., 1., 0., 0., 1., 0., 0., 0., 1., 1.],
+			[0., 0., 0., 0., 1., 1., 0., 0., 0., 1., 0., 0.],
+			[0., 0., 0., 0., 1., 1., 1., 0., 1., 0., 1., 0.],
+			[0., 0., 0., 0., 0., 1., 1., 1., 0., 1., 0., 1.],
+			[0., 0., 0., 0., 0., 0., 1., 1., 0., 0., 1., 0.]])
 
-			self.assertAlmostEqual(d, abs(d2))
+		self.assertTrue(np.all(grid_adjacency(3,4).toarray() == Atrue))
 
 
 class TestMatmul(unittest.TestCase):
@@ -65,112 +64,33 @@ class TestMatmul(unittest.TestCase):
 	def setUp(self):
 		pass
 
+	def test_slice(self):
+		m = 10
+		n = 20
+		for s in [0,1,2]:
+			np.random.seed(s)
+			S = np.random.rand(m+s, n+s) < 0.3
+			A = grid_adjacency(m+s, n+s)
 
-	def test_matmuls(self):
+			Ctrue = count_alive_neighbors(S)
+			Cmm = count_alive_neighbors_matmul(S, A)
 
-		matmuls = (
-			matmul_ijk,
-			matmul_ikj,
-			matmul_jik,
-			matmul_jki,
-			matmul_kij,
-			matmul_kji
-		)
-
-		p, q, r = 5,6,7
-
-		np.random.seed(0)
-		for i in range(5):
-			B = np.random.randn(p, r)
-			C = np.random.randn(r, q)
-
-			A_true = B @ C
-
-			for mm in matmuls:
-				A = mm(B, C)
-				self.assertTrue(np.all(np.abs(A - A_true) < tol))
+			self.assertTrue(np.all(Ctrue == Cmm))
 
 
-	def test_matmuls2(self):
-
-		matmuls = (
-			matmul_ijk,
-			matmul_ikj,
-			matmul_jik,
-			matmul_jki,
-			matmul_kij,
-			matmul_kij
-		)
-
-		p, q, r = 100, 101, 102
-
-		np.random.seed(0)
-		for i in range(5):
-			B = np.random.randn(p, r)
-			C = np.random.randn(r, q)
-
-			A_true = B @ C
-
-			for mm in matmuls:
-				A = mm(B, C)
-				self.assertTrue(np.all(np.abs(A - A_true) < tol))
-
-
-class TestBlocked(unittest.TestCase):
+class TestSlice(unittest.TestCase):
 
 	def setUp(self):
 		pass
 
+	def test_slice(self):
+		m = 10
+		n = 20
+		for s in [0,1,2]:
+			np.random.seed(s)
+			S = np.random.rand(m+s, n+s) < 0.3
 
-	def test_matmul_blocked(self):
-		n = 2**9
+			Ctrue = count_alive_neighbors(S)
+			Cslice = count_alive_neighbors_slice(S)
 
-		np.random.seed(0)
-		for i in range(5):
-			B = np.random.randn(n, n)
-			C = np.random.randn(n, n)
-
-			A_true = B @ C
-
-			A = matmul_blocked(B, C)
-
-			self.assertTrue(np.all(np.abs(A - A_true) < tol))
-
-
-class TestStrassen(unittest.TestCase):
-
-	def setUp(self):
-		pass
-
-
-	def test_matmul_strassen(self):
-		n = 2**9
-
-		np.random.seed(0)
-		for i in range(5):
-			B = np.random.randn(n, n)
-			C = np.random.randn(n, n)
-
-			A_true = B @ C
-
-			A = matmul_strassen(B, C)
-
-			self.assertTrue(np.all(np.abs(A - A_true) < tol))
-
-
-class TestMarkov(unittest.TestCase):
-
-	def setUp(self):
-		pass
-
-
-	def test_markov_matrix(self):
-		B = np.array(
-			[[0.5, 0.5, 0. , 0. ],
-			[0.5, 0. , 0.5, 0. ],
-			[0. , 0.5, 0. , 0.5],
-			[0. , 0. , 0.5, 0.5]])
-
-		A = markov_matrix(4)
-
-		self.assertTrue(np.all(A == B))
+			self.assertTrue(np.all(Ctrue == Cslice))

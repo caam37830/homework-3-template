@@ -6,8 +6,5 @@ This is a markdown file (the `.md` extension gives it away). If you have never u
 
 ## Problem 0
 
-## Problem 1
-
-## Problem 2
 
 ## Feedback
