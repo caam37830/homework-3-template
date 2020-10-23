@@ -165,7 +165,7 @@ cts[1:, :] = cts[1:, :] + S[:-1, :]
 Write a function `count_alive_neighbors_slice`
 which has the same inputs and outputs as `count_alive_neighbors`, but which is implemented using slices of `cts` and `S` (there should be 8 slices of each - one for each direction a neighbor can be located).
 
-Is this function faster or slower than `count_alive_neighbors`?  What about
+Is this function faster or slower than `count_alive_neighbors`?  What about `count_alive_neighbors_matmul`?
 
 In terms of memory access of `A` and `cts`, which of the three matrix types in part C would do matrix-vector multiplication in a way most similar to `count_alive_neighbors_slice`?
 
